@@ -1,0 +1,99 @@
+# DAKboard Optimized Boot Configuration (Raspberry Pi 4b)
+# Location: /boot/config.txt
+
+#=====================================================
+# Display Settings
+#=====================================================
+
+# Force HDMI output even when no display detected
+hdmi_force_hotplug=1
+
+# Disable overscan to prevent black borders
+disable_overscan=1
+
+# Enable KMS driver for better display performance
+dtoverlay=vc4-fkms-v3d
+
+# Enable double buffering to reduce screen tearing
+max_framebuffers=2
+
+#=====================================================
+# Performance Settings
+#=====================================================
+
+# Enable CPU frequency boosting for better performance
+arm_boost=1
+
+# Allocate 128MB to GPU (balanced for browser rendering)
+gpu_mem=128
+
+# Slight voltage increase for stability (safe value)
+over_voltage=2
+
+# Set CPU frequency to 1.8GHz for optimal performance
+arm_freq=1800
+
+#=====================================================
+# WiFi Optimizations
+#=====================================================
+
+# Disable WiFi power management to prevent disconnections
+dtoverlay=disable-wifi-power-management
+
+# Enable secondary antenna for better signal
+dtparam=ant2
+
+# Disable WiFi/Bluetooth coexistence for better WiFi stability
+dtparam=disable_wifi_btcoex=on
+
+#=====================================================
+# System Optimizations
+#=====================================================
+
+# Disable warning overlays for clean display
+avoid_warnings=1
+
+# Enable GPIO shutdown capability for clean shutdowns
+dtoverlay=gpio-shutdown
+
+# Disable unused audio hardware to save resources
+dtparam=audio=off
+
+#=====================================================
+# Hardware Monitoring
+#=====================================================
+
+# Enable hardware watchdog
+dtparam=watchdog=on
+
+#=====================================================
+# Pi 4 Specific Settings
+#=====================================================
+[pi4]
+# Enable KMS driver for Pi 4
+dtoverlay=vc4-fkms-v3d
+
+# Set framebuffer configuration for Pi 4
+max_framebuffers=2
+
+#=====================================================
+# Additional GPIO Settings (if needed)
+#=====================================================
+# Uncomment and modify if using GPIO cooling fan
+#dtoverlay=gpio-fan,gpiopin=14,temp=60000
+
+#=====================================================
+# Temperature Protection (if needed)
+#=====================================================
+# Uncomment if experiencing thermal issues
+#temp_soft_limit=70
+#temp_limit=75
+
+#=====================================================
+# Notes:
+# - Settings are optimized for DAKboard kiosk operation
+# - WiFi settings prioritize stability over power saving
+# - GPU memory is balanced for browser rendering
+# - Performance settings are safe for 24/7 operation
+# - Monitor temperature after applying these settings
+#=====================================================

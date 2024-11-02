@@ -1,0 +1,98 @@
+name: Test Installation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    # Install QEMU and debootstrap
+    - name: Set up QEMU
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static debootstrap
+
+    # Create a Raspberry Pi-like environment
+    - name: Create test environment
+      run: |
+        sudo mkdir -p /test-root
+        sudo debootstrap --arch=arm64 --foreign bullseye /test-root
+        sudo cp /usr/bin/qemu-arm-static /test-root/usr/bin/
+
+    # Mock Raspberry Pi specific commands
+    - name: Create mock commands
+      run: |
+        sudo mkdir -p /test-root/usr/local/bin
+        
+        # Mock vcgencmd
+        echo '#!/bin/bash
+        case "$1" in
+          "measure_temp")
+            echo "temp=45.0'C"
+            ;;
+          "get_throttled")
+            echo "0x0"
+            ;;
+          *)
+            echo "mock vcgencmd $*"
+            ;;
+        esac' | sudo tee /test-root/usr/local/bin/vcgencmd
+        sudo chmod +x /test-root/usr/local/bin/vcgencmd
+        
+        # Mock iwconfig
+        echo '#!/bin/bash
+        echo "wlan0     IEEE 802.11  ESSID:\"test\"
+        Mode:Managed  Frequency:2.412 GHz  Access Point: 00:00:00:00:00:00
+        Bit Rate=72.2 Mb/s   Tx-Power=31 dBm
+        Retry short limit:7   RTS thr:off   Fragment thr:off
+        Power Management:off
+        Link Quality=70/70  Signal level=-30 dBm
+        Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+        Tx excessive retries:0  Invalid misc:0   Missed beacon:0"' | sudo tee /test-root/usr/local/bin/iwconfig
+        sudo chmod +x /test-root/usr/local/bin/iwconfig
+
+    # Copy our files to test environment
+    - name: Copy repository files
+      run: |
+        sudo cp -r ./* /test-root/root/
+        sudo chmod +x /test-root/root/scripts/*.sh
+
+    # Run installation in test environment
+    - name: Test installation
+      run: |
+        sudo chroot /test-root /bin/bash -c "cd /root && ./scripts/install.sh --test-mode"
+
+    # Run verification script
+    - name: Run verification
+      run: |
+        sudo chroot /test-root /bin/bash -c "cd /root && ./scripts/verify.sh --ci-mode"
+
+    # Check configurations
+    - name: Verify configurations
+      run: |
+        sudo chroot /test-root /bin/bash -c '
+          # Check lighttpd config
+          test -f /etc/lighttpd/lighttpd.conf
+          
+          # Check watchdog config
+          test -f /etc/watchdog.conf
+          
+          # Check NetworkManager config
+          test -f /etc/NetworkManager/NetworkManager.conf
+          
+          # Check boot config
+          test -f /boot/config.txt
+          
+          # Basic content checks
+          grep "fastcgi.server" /etc/lighttpd/lighttpd.conf
+          grep "wifi.powersave" /etc/NetworkManager/NetworkManager.conf
+          grep "watchdog" /etc/watchdog.conf
+          grep "gpu_mem" /boot/config.txt
+        '

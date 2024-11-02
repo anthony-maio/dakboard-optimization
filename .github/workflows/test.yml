@@ -1,0 +1,39 @@
+name: Script Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install shellcheck
+      run: sudo apt-get install -y shellcheck
+
+    - name: Check shell scripts
+      run: |
+        find . -type f -name "*.sh" -exec shellcheck {} +
+
+    - name: Verify configuration files
+      run: |
+        for file in config/**/*; do
+          if [ -f "$file" ]; then
+            case "$file" in
+              *.conf) echo "Checking $file";;
+              *.txt)  echo "Checking $file";;
+              *.html) echo "Checking $file";;
+            esac
+          fi
+        done
+
+    - name: Test installation script
+      run: |
+        chmod +x scripts/install.sh
+        # Only syntax check, don't actually run
+        bash -n scripts/install.sh
